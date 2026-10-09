@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: core
+  threads:
+    virtual:
+      enabled: true  # requests run on virtual threads: no 1 MB stack per request thread
+  mvc:
+    problemdetails:
+      enabled: true
+  kafka:
+    consumer:
+      auto-offset-reset: earliest  # a new consumer group starts from the first message, not from "now"
+giexchange:
+  relay:
+    enabled: false
+  fees:
+    trade-bps: 500  # 5%, paid by the seller
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:postgresql://localhost:5432/core
+    username: core
+    password: core
+  kafka:
+    bootstrap-servers: localhost:9092
+  flyway:
+    locations: classpath:db/migration,classpath:db/dev
+giexchange:
+  relay:
+    enabled: true
