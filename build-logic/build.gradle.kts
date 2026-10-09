@@ -7,4 +7,5 @@ dependencies {
     implementation(libs.kotlin.serialization.gradle.plugin)
     implementation(libs.spring.boot.gradle.plugin)
     implementation(libs.kotlin.allopen.gradle.plugin)
+    implementation(libs.jib.gradle.plugin)
 }

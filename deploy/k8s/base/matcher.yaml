@@ -1,0 +1,30 @@
+# Two replicas: Kafka splits the 12 partitions of `orders` between them.
+# When one dies, the other takes over its partitions and rebuilds their order books by replay.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matcher
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: matcher
+  template:
+    metadata:
+      labels:
+        app: matcher
+    spec:
+      containers:
+        - name: matcher
+          image: game-item-exchange/matcher:dev
+          envFrom:
+            - configMapRef:
+                name: matcher-config
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 100m
+            limits:
+              memory: 384Mi
+          # No probes yet: the matcher has no HTTP endpoint, and on any error it exits,
+          # so Kubernetes restarts it anyway. A health endpoint comes together with metrics.

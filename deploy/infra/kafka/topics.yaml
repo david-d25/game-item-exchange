@@ -1,0 +1,38 @@
+# The three topics of the platform. Partition count is fixed forever: the partition of a market
+# is computed from it, and changing it would move markets to other partitions.
+# Retention is unlimited: the matcher rebuilds order books by replaying `orders` from the beginning.
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: orders
+  labels:
+    strimzi.io/cluster: exchange
+spec:
+  partitions: 12
+  replicas: 1
+  config:
+    retention.ms: -1
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: match-results
+  labels:
+    strimzi.io/cluster: exchange
+spec:
+  partitions: 12
+  replicas: 1
+  config:
+    retention.ms: -1
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: market-events
+  labels:
+    strimzi.io/cluster: exchange
+spec:
+  partitions: 12
+  replicas: 1
+  config:
+    retention.ms: -1

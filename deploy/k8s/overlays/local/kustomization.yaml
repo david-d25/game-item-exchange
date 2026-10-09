@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: gie
+resources:
+  - ../../base
+secretGenerator:
+  - name: postgres
+    literals:
+      - username=core
+      - password=core-local-only
+configMapGenerator:
+  - name: core-config
+    literals:
+      # Until real authentication exists: dev header auth and the dev seed with Alice and Bob
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/core
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=exchange-kafka-bootstrap.kafka.svc:9092
+  - name: matcher-config
+    literals:
+      - KAFKA_BOOTSTRAP_SERVERS=exchange-kafka-bootstrap.kafka.svc:9092

@@ -1,5 +1,6 @@
 plugins {
     id("gie.spring-service")
+    id("gie.jvm-image")
 }
 
 dependencies {
@@ -8,6 +9,7 @@ dependencies {
     implementation(libs.spring.boot.starter.jdbc)
     implementation(libs.spring.boot.starter.flyway)
     implementation(libs.spring.boot.starter.kafka)
+    implementation(libs.spring.boot.starter.actuator)
     implementation(libs.jackson.module.kotlin)
     runtimeOnly(libs.flyway.database.postgresql)
     runtimeOnly(libs.postgresql)

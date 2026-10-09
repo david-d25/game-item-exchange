@@ -1,0 +1,71 @@
+# A stable address for Postgres inside the cluster: postgres.gie.svc:5432, or just postgres:5432 from the same namespace
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+---
+# StatefulSet, not Deployment: the pod keeps its name (postgres-0) and gets the same disk back after every restart
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:18
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: core
+            # Credentials come from a Secret, which the overlay of each environment provides
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: password
+          resources:
+            # Reserved for this pod when choosing a node
+            requests:
+              memory: 256Mi
+              cpu: 100m
+            # Hard ceiling: above it the container is killed (OOMKilled) and restarted
+            limits:
+              memory: 512Mi
+          # The pod receives traffic only once Postgres actually accepts connections
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d core"]
+            periodSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql
+  # A persistent disk for each pod of the StatefulSet. It outlives the pod: delete the pod and the data stays.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi

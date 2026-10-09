@@ -1,5 +1,6 @@
 plugins {
     id("gie.kotlin-library")
+    id("gie.jvm-image")
     application
 }
 

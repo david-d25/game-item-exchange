@@ -1,0 +1,15 @@
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: gie
+servers: 1
+agents: 2
+ports:
+  # Ingress on localhost:8081; 8080 stays free for core started from the IDE
+  - port: 8081:80
+    nodeFilters:
+      - loadbalancer
+kubeAPI:
+  host: "127.0.0.1"    # the address written into the kubeconfig
+  hostIP: "127.0.0.1"  # the address the API port is published on
+  hostPort: "6445"     # a fixed port instead of a random one
