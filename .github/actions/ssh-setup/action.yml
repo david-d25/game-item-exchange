@@ -1,0 +1,54 @@
+# The same action as in the other projects on this server: after it, `ssh deploy-target`
+# reaches the VDS as the deploy user.
+name: SSH to the deploy host
+description: Writes the deploy key, pins the host key and defines the deploy-target alias
+
+inputs:
+  key:
+    description: Private half of the deploy key
+    required: true
+  host:
+    description: The VDS
+    required: true
+  host-key:
+    description: known_hosts line for the host; scanned on the fly if empty
+    required: false
+    default: ''
+  user:
+    description: User to log in as
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        KEY: ${{ inputs.key }}
+        HOST: ${{ inputs.host }}
+        HOST_KEY: ${{ inputs.host-key }}
+        SSH_USER: ${{ inputs.user }}
+      run: |
+        mkdir -p ~/.ssh
+        printf '%s\n' "$KEY" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+
+        # Pinned when we are given one; scanning trusts whichever host happens to answer.
+        if [ -n "$HOST_KEY" ]; then
+          printf '%s\n' "$HOST_KEY" > ~/.ssh/known_hosts
+        else
+          echo "::warning::DEPLOY_HOST_KEY is not set; scanning the host key instead"
+          ssh-keyscan -t ed25519 "$HOST" >> ~/.ssh/known_hosts
+        fi
+
+        # Retries: sshd on a public address drops connections at random once its
+        # pre-auth queue is full.
+        cat >> ~/.ssh/config <<CONF
+        Host deploy-target
+          HostName $HOST
+          User $SSH_USER
+          IdentityFile ~/.ssh/id_ed25519
+          IdentitiesOnly yes
+          ConnectTimeout 20
+          ConnectionAttempts 5
+          ServerAliveInterval 30
+        CONF

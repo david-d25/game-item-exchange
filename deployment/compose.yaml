@@ -1,0 +1,158 @@
+# The exchange as it runs on the VDS: the same images as in Kubernetes, without Kubernetes.
+#
+# Nothing is built here: CI builds the images, tags them with the commit and pushes them to GHCR.
+# Only the gateway is published, on 127.0.0.1; the host's nginx terminates TLS and forwards /exchange/ to it.
+# PostgreSQL is the host's own, outside of this project.
+#
+# Differences from deploy/k8s, all to fit next to other projects on a small server:
+# - one core process does everything: HTTP API, settlement and the outbox relay;
+# - one matcher instance owns all 12 partitions;
+# - Kafka is a single native-image broker without Strimzi, so core creates the topics itself;
+# - no Prometheus and Grafana: they cost more memory than the whole exchange.
+
+name: game-item-exchange
+
+x-logging: &logging
+  # Docker's default JSON driver grows without limit.
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  gateway:
+    image: ghcr.io/david-d25/game-item-exchange/web:${TAG:-latest}
+    restart: unless-stopped
+    logging: *logging
+    ports:
+      - "127.0.0.1:${APP_PORT:?APP_PORT is not set in .env}:80"
+    environment:
+      CORE_URL: http://core:8080
+    mem_limit: 64m
+    # No depends_on: the gateway looks core up per request and answers 503 while it is away
+
+  core:
+    image: ghcr.io/david-d25/game-item-exchange/core:${TAG:-latest}
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/${DB_NAME:-exchange}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-exchange}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is not set in .env}
+      # The host's PostgreSQL is shared with other projects: keep few connections
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "5"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      # Topics must exist before anything uses them: stop and let Docker restart core
+      # rather than run on without them
+      SPRING_KAFKA_ADMIN_FAIL_FAST: "true"
+      GIEXCHANGE_TOPICS_CREATE: "true"
+      GIEXCHANGE_RELAY_ENABLED: "true"
+      GIEXCHANGE_AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is not set in .env}
+      GIEXCHANGE_INTERNAL_TOKEN: ${INTERNAL_TOKEN:?INTERNAL_TOKEN is not set in .env}
+      # Smaller than the defaults of the image, which sizes the heap from the container limit.
+      # C1 only: less memory and CPU for compiling, enough speed for a demo.
+      JAVA_TOOL_OPTIONS: >-
+        -Xmx192m
+        -XX:MaxMetaspaceSize=160m
+        -XX:ReservedCodeCacheSize=64m
+        -XX:TieredStopAtLevel=1
+        -Xss512k
+    mem_limit: 448m
+    extra_hosts:
+      # PostgreSQL runs on the host, outside of this project.
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      # The image has bash but neither curl nor wget
+      test:
+        - CMD
+        - bash
+        - -c
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/8080 &&
+          printf 'GET /actuator/health/readiness HTTP/1.0\r\n\r\n' >&3 &&
+          grep -q '"UP"' <&3
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 180s
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  matcher:
+    image: ghcr.io/david-d25/game-item-exchange/matcher:${TAG:-latest}
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JAVA_TOOL_OPTIONS: >-
+        -Xmx128m
+        -XX:MaxMetaspaceSize=64m
+        -XX:ReservedCodeCacheSize=32m
+        -Xss512k
+    mem_limit: 256m
+    depends_on:
+      # Core creates the topics; a consumer that comes first only gets errors until they exist
+      core:
+        condition: service_healthy
+
+  bots:
+    image: ghcr.io/david-d25/game-item-exchange/bots:${TAG:-latest}
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      # Core directly: the gateway does not forward the internal API
+      CORE_URL: http://core:8080
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:?INTERNAL_TOKEN is not set in .env}
+      BOT_MAKERS: "2"
+      BOT_TAKERS: "3"
+      # Half the local rate: every order is kept forever in Kafka and in the database
+      BOT_ORDERS_PER_SECOND: ${BOT_ORDERS_PER_SECOND:-1}
+    mem_limit: 128m
+    # The bots cancel their open orders on SIGTERM, within about 5 s
+    stop_grace_period: 15s
+    depends_on:
+      core:
+        condition: service_healthy
+
+  kafka:
+    # The GraalVM build of the broker: starts in a second and needs a fraction of the JVM's memory.
+    # Upstream calls it experimental; here it carries a demo, and the files it writes are standard.
+    image: apache/kafka-native:4.3.1
+    restart: unless-stopped
+    logging: *logging
+    # The deploy user's uid, so it can write the bind-mounted data directory; group 0 is what
+    # the image gives write access to its config directory.
+    user: "${APP_UID:-1000}:0"
+    environment:
+      # Written into kafka-data/ on the first start and checked on every later one. Fixed here, so that
+      # a new image with a different default could never refuse the existing data.
+      CLUSTER_ID: yUi1fIpQRDu9wLlyCwFRRA
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      # One broker, so every internal topic can have only one copy
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # A client that comes before core must not create `orders` with one partition:
+      # the partition of a market is computed from the partition count
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_OPTS: -Xmx192m
+    mem_limit: 384m
+    volumes:
+      # A directory next to this file, not a named volume: the matcher rebuilds its order books
+      # from `orders`, so this data must outlive any `docker compose down -v`.
+      - ./kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "9092"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 60s

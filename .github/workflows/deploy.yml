@@ -1,0 +1,167 @@
+# Build once, deploy that exact build.
+#
+# The images are the artifact: they are built here, tagged with the commit they came from,
+# pushed to GHCR, and the server only pulls them. See deployment/README.md.
+#
+# Rolling back is setting TAG to an older commit on the server and running `up -d`.
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+
+jobs:
+  jvm:
+    name: Build and publish core and matcher
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Runs the tests too: a commit that fails them never gets an image.
+      - name: Build and test
+        run: ./gradlew build --console=plain
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: '**/build/reports/tests/'
+
+      # Jib builds the images without Docker and pushes them straight to the registry.
+      - name: Push images
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          ./gradlew :platform:core:jib :platform:matcher:jib --console=plain
+          -PimageRepository="$IMAGE_PREFIX"
+          -PimageTag="$GITHUB_SHA"
+          -Djib.to.tags=latest
+          -Djib.to.auth.username="$REGISTRY_USER"
+          -Djib.to.auth.password="$REGISTRY_PASSWORD"
+
+  web:
+    name: Build and publish the web app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The image build type-checks and builds the app (npm run build)
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: platform/web
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/web:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}/web:latest
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,scope=web,mode=max
+
+  bots:
+    name: Build and publish the bots
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: clients/bots/package-lock.json
+
+      - name: Test
+        working-directory: clients/bots
+        run: npm ci && npm test
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: clients/bots
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/bots:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}/bots:latest
+          cache-from: type=gha,scope=bots
+          cache-to: type=gha,scope=bots,mode=max
+
+  deploy:
+    name: Deploy
+    needs: [jvm, web, bots]
+    runs-on: ubuntu-latest
+    # Build and publish only until a deploy host is configured
+    if: ${{ vars.DEPLOY_HOST != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authorise
+        uses: ./.github/actions/ssh-setup
+        with:
+          key: ${{ secrets.DEPLOY_KEY }}
+          host: ${{ vars.DEPLOY_HOST }}
+          host-key: ${{ vars.DEPLOY_HOST_KEY }}
+          user: ${{ vars.DEPLOY_USER }}
+
+      # One connection for the whole deploy; the files travel through the same pipe as a tar stream.
+      #
+      # `.env` and `kafka-data/` are not in the archive (they are not in git), so the server's own
+      # copies survive; only the TAG line is rewritten. kafka-data/ is created here, by the deploy user:
+      # Docker would create a missing bind-mount source owned by root, and Kafka could not write to it.
+      #
+      # --wait fails the job if core does not become healthy, instead of reporting success
+      # while the site answers 503.
+      - name: Ship and restart
+        env:
+          DIR: ${{ vars.DEPLOY_PATH }}
+          TAG: ${{ github.sha }}
+        run: |
+          tar -C deployment -czf - . | ssh deploy-target "
+            set -eu
+            mkdir -p '$DIR'
+            tar -C '$DIR' -xzf -
+            cd '$DIR'
+            mkdir -p kafka-data
+            touch .env
+            sed -i '/^TAG=/d' .env
+            echo 'TAG=$TAG' >> .env
+            docker compose pull
+            docker compose up -d --remove-orphans --wait --wait-timeout 300
+            docker image prune -f
+          "
