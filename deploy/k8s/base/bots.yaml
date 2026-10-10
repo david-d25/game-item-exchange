@@ -1,0 +1,41 @@
+# Trading bots that keep the demo market alive. They talk to core-api directly: the internal API
+# is not reachable through the gateway.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bots
+spec:
+  replicas: 1
+  # Two bot processes would trade the same bot accounts against each other: stop the old one first
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: bots
+  template:
+    metadata:
+      labels:
+        app: bots
+    spec:
+      # The bots cancel their open orders on SIGTERM, within about 5 s
+      terminationGracePeriodSeconds: 15
+      containers:
+        - name: bots
+          image: game-item-exchange/bots:dev
+          envFrom:
+            - configMapRef:
+                name: bots-config
+          env:
+            - name: CORE_URL
+              value: http://core-api
+            - name: INTERNAL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: core-secrets
+                  key: internal-token
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 20m
+            limits:
+              memory: 128Mi

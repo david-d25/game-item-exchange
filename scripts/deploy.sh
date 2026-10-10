@@ -11,11 +11,13 @@ cd "$(dirname "$0")/.."
 
 CLUSTER=gie
 NAMESPACE=gie
-IMAGES=(game-item-exchange/core:dev game-item-exchange/matcher:dev)
-DEPLOYMENTS=(core-api core-relay matcher)
+IMAGES=(game-item-exchange/core:dev game-item-exchange/matcher:dev game-item-exchange/web:dev game-item-exchange/bots:dev)
+DEPLOYMENTS=(core-api core-relay matcher web bots)
 
 echo "==> Images"
 ./gradlew :platform:core:jibDockerBuild :platform:matcher:jibDockerBuild
+docker build -t game-item-exchange/web:dev platform/web
+docker build -t game-item-exchange/bots:dev clients/bots
 k3d image import "${IMAGES[@]}" -c "$CLUSTER"
 
 echo "==> Manifests"
@@ -29,4 +31,4 @@ for deployment in "${DEPLOYMENTS[@]}"; do
   kubectl -n "$NAMESPACE" rollout status deployment "$deployment" --timeout=300s
 done
 
-echo "Platform is up: http://localhost:8081/api"
+echo "Platform is up: http://localhost:8081/exchange/"

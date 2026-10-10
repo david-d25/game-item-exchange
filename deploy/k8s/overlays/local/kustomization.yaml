@@ -8,13 +8,22 @@ secretGenerator:
     literals:
       - username=core
       - password=core-local-only
+  - name: core-secrets
+    literals:
+      - auth-secret=local-only-token-secret-not-for-production
+      - internal-token=local-only-internal-token
 configMapGenerator:
   - name: core-config
     literals:
-      # Until real authentication exists: dev header auth and the dev seed with Alice and Bob
+      # The dev profile adds the dev seed with Alice and Bob and the X-Dev-User-Id header for debugging
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/core
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=exchange-kafka-bootstrap.kafka.svc:9092
   - name: matcher-config
     literals:
       - KAFKA_BOOTSTRAP_SERVERS=exchange-kafka-bootstrap.kafka.svc:9092
+  - name: bots-config
+    literals:
+      - BOT_MAKERS=2
+      - BOT_TAKERS=3
+      - BOT_ORDERS_PER_SECOND=2

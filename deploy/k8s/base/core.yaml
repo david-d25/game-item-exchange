@@ -37,6 +37,16 @@ spec:
                   key: password
             - name: GIEXCHANGE_RELAY_ENABLED
               value: "false"
+            - name: GIEXCHANGE_AUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: core-secrets
+                  key: auth-secret
+            - name: GIEXCHANGE_INTERNAL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: core-secrets
+                  key: internal-token
           resources:
             requests:
               memory: 384Mi
@@ -117,6 +127,11 @@ spec:
               value: "true"
             - name: GIEXCHANGE_SETTLEMENT_ENABLED
               value: "false"
+            - name: GIEXCHANGE_AUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: core-secrets
+                  key: auth-secret
           resources:
             requests:
               memory: 384Mi

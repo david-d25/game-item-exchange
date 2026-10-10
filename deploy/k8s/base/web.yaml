@@ -1,0 +1,52 @@
+# The web app and the gateway in front of core: /exchange/ serves the app, /exchange/api/ goes to core-api.
+# The same image is the gateway in the Compose production, so both environments route requests alike.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: game-item-exchange/web:dev
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            - name: CORE_URL
+              value: http://core-api.gie.svc.cluster.local
+          resources:
+            requests:
+              memory: 16Mi
+              cpu: 10m
+            limits:
+              memory: 64Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+spec:
+  selector:
+    app: web
+  ports:
+    - port: 80
+      targetPort: 80

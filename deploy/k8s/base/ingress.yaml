@@ -1,5 +1,6 @@
-# Entrance from outside the cluster. Only /api is routed: /actuator stays reachable
-# for Kubernetes probes inside the cluster, but not from the internet.
+# Entrance from outside the cluster: everything goes to the gateway (the web image), as in production.
+# The gateway forwards only /exchange/api/ to core, so /actuator and /internal stay reachable
+# inside the cluster but not from outside.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -8,10 +9,10 @@ spec:
   rules:
     - http:
         paths:
-          - path: /api
+          - path: /
             pathType: Prefix
             backend:
               service:
-                name: core-api
+                name: web
                 port:
                   number: 80
