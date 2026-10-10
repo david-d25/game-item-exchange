@@ -27,6 +27,7 @@ helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
   -f deploy/infra/monitoring/values.yaml \
   --version "$KUBE_PROMETHEUS_STACK_VERSION" \
   --wait --timeout 10m
+kubectl apply -k deploy/infra/monitoring
 
 echo "==> Strimzi operator $STRIMZI_VERSION"
 helm repo add strimzi https://strimzi.io/charts/ --force-update > /dev/null

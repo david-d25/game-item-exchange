@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: monitoring
+configMapGenerator:
+  - name: gie-dashboard
+    files:
+      - dashboards/platform.json
+    options:
+      # A fixed name: with a hash suffix every change would leave the old ConfigMap behind,
+      # and Grafana would show two copies of the dashboard
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"
