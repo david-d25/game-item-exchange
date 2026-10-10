@@ -1,0 +1,43 @@
+# kube-prometheus-stack for the local k3d cluster
+
+# No alerts yet: one component less to run
+alertmanager:
+  enabled: false
+
+grafana:
+  adminPassword: admin-local-only
+  sidecar:
+    dashboards:
+      enabled: true
+      # ConfigMaps with this label are loaded as dashboards, from any namespace
+      label: grafana_dashboard
+      searchNamespace: ALL
+
+prometheus:
+  prometheusSpec:
+    # By default, Prometheus only uses ServiceMonitors and PodMonitors labeled with this Helm release.
+    # These two settings make it use all of them, in every namespace.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    retention: 2d
+    resources:
+      requests:
+        memory: 400Mi
+      limits:
+        memory: 1Gi
+
+# k3s runs these components inside its single binary: there is nothing separate to scrape,
+# and leaving them on only produces targets that are always down
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+kubeEtcd:
+  enabled: false
+
+prometheus-node-exporter:
+  # k3d nodes are containers, and Docker Desktop cannot share the host root filesystem with them
+  hostRootFsMount:
+    enabled: false

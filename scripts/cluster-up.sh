@@ -11,6 +11,7 @@ cd "$(dirname "$0")/.."
 
 CLUSTER=gie
 STRIMZI_VERSION=1.2.0
+KUBE_PROMETHEUS_STACK_VERSION=92.3.0
 
 echo "==> Cluster"
 if k3d cluster get "$CLUSTER" > /dev/null 2>&1; then
@@ -18,6 +19,14 @@ if k3d cluster get "$CLUSTER" > /dev/null 2>&1; then
 else
   k3d cluster create --config deploy/k3d/cluster.yaml
 fi
+
+echo "==> Monitoring"
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts --force-update > /dev/null
+helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+  --namespace monitoring --create-namespace \
+  -f deploy/infra/monitoring/values.yaml \
+  --version "$KUBE_PROMETHEUS_STACK_VERSION" \
+  --wait --timeout 10m
 
 echo "==> Strimzi operator $STRIMZI_VERSION"
 helm repo add strimzi https://strimzi.io/charts/ --force-update > /dev/null

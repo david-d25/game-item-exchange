@@ -1,5 +1,8 @@
 package space.davids_digital.giexchange.core.outbox
 
+import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.Gauge
+import io.micrometer.core.instrument.MeterRegistry
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.jdbc.core.simple.JdbcClient
@@ -25,12 +28,27 @@ class OutboxRelay(
     private val jdbc: JdbcClient,
     private val kafka: KafkaTemplate<String, String>,
     transactionManager: PlatformTransactionManager,
+    registry: MeterRegistry,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
     // Programmatic transactions: @Transactional on a method called from this same class
     // would be silently ignored, because the call does not go through the Spring proxy.
     private val transactions = TransactionTemplate(transactionManager)
+
+    private val sent = Counter.builder("outbox.sent")
+        .description("Outbox messages published to Kafka")
+        .register(registry)
+
+    init {
+        Gauge.builder("outbox.pending", this) { it.pendingCount().toDouble() }
+            .description("Outbox messages not published yet")
+            .register(registry)
+        Gauge.builder("outbox.oldest.pending.age", this) { it.oldestPendingAgeSeconds() }
+            .baseUnit("seconds")
+            .description("How long the oldest unpublished message has been waiting")
+            .register(registry)
+    }
 
     @Scheduled(fixedDelayString = $$"${giexchange.relay.poll-interval:200ms}")
     fun poll() {
@@ -92,8 +110,19 @@ class OutboxRelay(
         jdbc.sql("update outbox set sent_at = now() where outbox_id in (:ids)")
             .param("ids", batch.map { it.id })
             .update()
+        sent.increment(batch.size.toDouble())
         batch.size
     }
+
+    private fun pendingCount(): Long =
+        jdbc.sql("select count(*) from outbox where sent_at is null")
+            .query(Long::class.javaObjectType)
+            .single()
+
+    private fun oldestPendingAgeSeconds(): Double =
+        jdbc.sql("select coalesce(extract(epoch from now() - min(created_at)), 0) from outbox where sent_at is null")
+            .query(Double::class.javaObjectType)
+            .single()
 
     private data class OutboxMessage(val id: Long, val topic: String, val key: String, val payload: String)
 

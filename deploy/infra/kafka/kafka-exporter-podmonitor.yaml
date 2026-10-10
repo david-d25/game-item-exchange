@@ -1,0 +1,13 @@
+# Consumer group lag and partition offsets, published by the exporter Strimzi created from `kafkaExporter: {}`
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: kafka-exporter
+spec:
+  selector:
+    matchLabels:
+      strimzi.io/name: exchange-kafka-exporter
+  podMetricsEndpoints:
+    - port: tcp-prometheus
+      path: /metrics
+      interval: 15s

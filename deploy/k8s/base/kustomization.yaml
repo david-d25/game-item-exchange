@@ -7,3 +7,4 @@ resources:
   - core.yaml
   - matcher.yaml
   - ingress.yaml
+  - podmonitors.yaml

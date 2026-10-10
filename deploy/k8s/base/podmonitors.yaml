@@ -1,0 +1,30 @@
+# Tells Prometheus to scrape every core pod, both the API and the relay, every 15 seconds
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: core
+spec:
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - core-api
+          - core-relay
+  podMetricsEndpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: matcher
+spec:
+  selector:
+    matchLabels:
+      app: matcher
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: 15s

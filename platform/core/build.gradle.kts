@@ -13,6 +13,7 @@ dependencies {
     implementation(libs.jackson.module.kotlin)
     runtimeOnly(libs.flyway.database.postgresql)
     runtimeOnly(libs.postgresql)
+    runtimeOnly(libs.micrometer.registry.prometheus)
 
     testImplementation(libs.spring.boot.starter.test)
 }

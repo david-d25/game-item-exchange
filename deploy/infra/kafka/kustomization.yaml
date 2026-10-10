@@ -4,3 +4,4 @@ namespace: kafka
 resources:
   - kafka-cluster.yaml
   - topics.yaml
+  - kafka-exporter-podmonitor.yaml

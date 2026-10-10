@@ -1,5 +1,8 @@
 package space.davids_digital.giexchange.core.settlement
 
+import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Timer
 import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -26,6 +29,8 @@ import space.davids_digital.giexchange.core.ledger.Ledger
 import space.davids_digital.giexchange.core.ledger.LedgerTxKind
 import space.davids_digital.giexchange.core.market.MarketEvents
 import space.davids_digital.giexchange.core.order.OrderStatus
+import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -51,9 +56,22 @@ class Settlement(
     private val jdbc: JdbcClient,
     private val ledger: Ledger,
     private val marketEvents: MarketEvents,
+    private val clock: Clock,
+    registry: MeterRegistry,
     @Value($$"${giexchange.fees.trade-bps}") private val feeBps: Long,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
+
+    private val settlementDelay = Timer.builder("exchange.settlement.delay")
+        .description("Time from core accepting a command to settling a result of it")
+        .publishPercentileHistogram()
+        .register(registry)
+    private val trades = Counter.builder("exchange.trades")
+        .description("Settled trades")
+        .register(registry)
+    private val tradedCredits = Counter.builder("exchange.traded.credits")
+        .description("Credits paid in settled trades")
+        .register(registry)
 
     init {
         require(feeBps in 0..10_000) { "Trade fee must be between 0 and 10000 basis points: $feeBps" }
@@ -69,6 +87,8 @@ class Settlement(
             log.debug("Match result {} was already applied, skipping", result.resultId.value)
             return
         }
+
+        settlementDelay.record(Duration.ofMillis(clock.millis() - result.occurredAt))
 
         when (result) {
             is TradeExecuted -> settleTrade(result)
@@ -186,6 +206,8 @@ class Settlement(
         marketEvents.tradeSettled(trade)
         val makerSide = if (trade.takerSide == Side.BUY) Side.SELL else Side.BUY
         marketEvents.levelChanged(trade.marketKey, makerSide, trade.price.amount, trade.occurredAt)
+        trades.increment()
+        tradedCredits.increment(cost.toDouble())
     }
 
     private fun openOrder(rested: OrderRested) {

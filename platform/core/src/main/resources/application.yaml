@@ -15,6 +15,11 @@ giexchange:
     enabled: false
   fees:
     trade-bps: 500  # 5%, paid by the seller
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
 
 ---
 spring:

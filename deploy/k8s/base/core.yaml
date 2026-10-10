@@ -18,7 +18,8 @@ spec:
         - name: core
           image: game-item-exchange/core:dev
           ports:
-            - containerPort: 8080
+            - name: http
+              containerPort: 8080
           # Settings that differ between environments come from a ConfigMap made by the overlay
           envFrom:
             - configMapRef:
@@ -95,6 +96,9 @@ spec:
       containers:
         - name: core
           image: game-item-exchange/core:dev
+          ports:
+            - name: http
+              containerPort: 8080
           envFrom:
             - configMapRef:
                 name: core-config

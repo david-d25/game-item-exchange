@@ -17,6 +17,9 @@ spec:
       containers:
         - name: matcher
           image: game-item-exchange/matcher:dev
+          ports:
+            - name: metrics
+              containerPort: 9404
           envFrom:
             - configMapRef:
                 name: matcher-config

@@ -10,6 +10,7 @@ dependencies {
     implementation(platform(libs.spring.boot.bom))
     implementation(libs.kafka.clients)
     implementation(libs.slf4j.api)
+    implementation(libs.micrometer.registry.prometheus)
     runtimeOnly(libs.logback.classic)
 }
 
