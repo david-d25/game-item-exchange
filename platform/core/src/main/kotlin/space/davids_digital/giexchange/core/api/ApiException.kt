@@ -35,3 +35,9 @@ fun conflict(type: String, title: String, detail: String) =
 
 fun unprocessable(type: String, title: String, detail: String) =
     ApiException(UNPROCESSABLE_CONTENT, type, title, detail)
+
+fun forbidden() =
+    ApiException(HttpStatus.FORBIDDEN, "forbidden", "Forbidden", "The request is not allowed")
+
+fun tooManyRequests(type: String, title: String, detail: String) =
+    ApiException(HttpStatus.TOO_MANY_REQUESTS, type, title, detail)

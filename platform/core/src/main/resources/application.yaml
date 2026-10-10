@@ -13,13 +13,36 @@ spring:
 giexchange:
   relay:
     enabled: false
+  topics:
+    create: false  # Kubernetes has the Strimzi topic operator; the Compose production turns this on
   fees:
     trade-bps: 500  # 5%, paid by the seller
+  auth:
+    secret: ""  # HMAC key for user tokens, at least 32 bytes; core does not start without one
+  internal:
+    token: ""  # shared secret of the internal API for bots; empty turns the internal API off
+  notifications:
+    keep: 7d
+  guest:
+    max-per-hour: 300
+    token-ttl: 30d
+    starter-credits: 50000
+    starter-items:
+      - market-key: idle-mine/iron_ore
+        quantity: 20
+      - market-key: idle-mine/coal
+        quantity: 50
+      - market-key: idle-mine/crystal
+        quantity: 2
 management:
   endpoints:
     web:
       exposure:
         include: health,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true  # /actuator/health/liveness and /readiness, also outside Kubernetes
 
 ---
 spring:
@@ -37,3 +60,7 @@ spring:
 giexchange:
   relay:
     enabled: true
+  auth:
+    secret: dev-only-token-secret-do-not-use-in-production
+  internal:
+    token: dev-internal-token

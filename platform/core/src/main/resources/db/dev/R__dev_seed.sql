@@ -1,5 +1,5 @@
--- Development data: one game, one fungible market, two users with credits, Bob owns iron ore.
--- Applied only in the dev profile. Runs after all versioned migrations and does nothing
+-- Development data: two users with credits, Bob owns iron ore. The game and its markets come from
+-- the V3 migration. Applied only in the dev profile. Runs after all versioned migrations and does nothing
 -- if users already exist: to apply a changed seed, reset the local database.
 do $$
     declare
@@ -12,17 +12,8 @@ do $$
             return;
         end if;
 
-        insert into games (game_id, name, api_key_hash)
-        values ('idle-mine', 'Idle Mine', 'dev-only-not-a-real-key-hash');
-
-        insert into item_definitions (game_id, def_id, kind, name)
-        values ('idle-mine', 'iron_ore', 'FUNGIBLE', 'Iron ore');
-
-        insert into markets (market_key, game_id, def_id)
-        values ('idle-mine/iron_ore', 'idle-mine', 'iron_ore');
-
-        insert into users default values returning user_id into alice;
-        insert into users default values returning user_id into bob;
+        insert into users (display_name) values ('Alice') returning user_id into alice;
+        insert into users (display_name) values ('Bob') returning user_id into bob;
 
         insert into user_identities (provider, subject, user_id)
         values ('PASSWORD', 'alice', alice),

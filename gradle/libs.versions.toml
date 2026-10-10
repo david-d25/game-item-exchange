@@ -3,6 +3,7 @@ kotlin = "2.4.20"
 kotlinx-serialization = "1.11.0"
 spring-boot = "4.1.1"
 jib = "3.5.4"
+nimbus-jose-jwt = "10.10"  # not managed by the Spring Boot BOM
 
 [libraries]
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
@@ -27,3 +28,4 @@ flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql
 postgresql = { module = "org.postgresql:postgresql" }
 jib-gradle-plugin = { module = "com.google.cloud.tools:jib-gradle-plugin", version.ref = "jib" }
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }
+nimbus-jose-jwt = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimbus-jose-jwt" }

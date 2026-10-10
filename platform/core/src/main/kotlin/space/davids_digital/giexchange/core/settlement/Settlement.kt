@@ -27,6 +27,7 @@ import space.davids_digital.giexchange.contracts.UserId
 import space.davids_digital.giexchange.core.ledger.AccountKind
 import space.davids_digital.giexchange.core.ledger.Ledger
 import space.davids_digital.giexchange.core.ledger.LedgerTxKind
+import space.davids_digital.giexchange.core.market.Candles
 import space.davids_digital.giexchange.core.market.MarketEvents
 import space.davids_digital.giexchange.core.order.OrderStatus
 import java.time.Clock
@@ -56,6 +57,7 @@ class Settlement(
     private val jdbc: JdbcClient,
     private val ledger: Ledger,
     private val marketEvents: MarketEvents,
+    private val candles: Candles,
     private val clock: Clock,
     registry: MeterRegistry,
     @Value($$"${giexchange.fees.trade-bps}") private val feeBps: Long,
@@ -190,6 +192,7 @@ class Settlement(
             .param("asset", assetId?.value, java.sql.Types.BIGINT)
             .param("occurredAt", timestamp(trade.occurredAt))
             .update()
+        candles.record(trade.marketKey.value, trade.price.amount, trade.quantity, timestamp(trade.occurredAt))
 
         notify(seller, "ITEM_SOLD") {
             put("marketKey", trade.marketKey.value)
@@ -317,8 +320,15 @@ class Settlement(
         return rows
     }
 
+    /** Bots trade all day and never read notifications: skipping them keeps the table small. */
     private fun notify(user: UserId, kind: String, params: JsonObjectBuilder.() -> Unit) {
-        jdbc.sql("insert into notifications (user_id, kind, params) values (:user, :kind, cast(:params as jsonb))")
+        jdbc.sql(
+            """
+            insert into notifications (user_id, kind, params)
+            select :user, :kind, cast(:params as jsonb)
+            where not exists (select 1 from user_identities where user_id = :user and provider = 'BOT')
+            """
+        )
             .param("user", user.value)
             .param("kind", kind)
             .param("params", buildJsonObject(params).toString())

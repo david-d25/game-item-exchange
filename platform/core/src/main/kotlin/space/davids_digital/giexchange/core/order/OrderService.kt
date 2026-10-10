@@ -25,6 +25,7 @@ import space.davids_digital.giexchange.core.ledger.InsufficientFundsException
 import space.davids_digital.giexchange.core.ledger.Ledger
 import space.davids_digital.giexchange.core.ledger.LedgerTxKind
 import space.davids_digital.giexchange.core.outbox.Outbox
+import java.sql.ResultSet
 import java.sql.Types
 import java.time.Clock
 import java.time.Instant
@@ -33,6 +34,8 @@ import java.time.OffsetDateTime
 enum class OrderStatus { PENDING, OPEN, CLOSED }
 
 enum class ItemKind { UNIQUE, FUNGIBLE }
+
+enum class OrderFilter { ACTIVE, CLOSED, ALL }
 
 data class PlacementResult(val orderId: Long, val status: OrderStatus, val created: Boolean)
 
@@ -127,25 +130,53 @@ class OrderService(
         )
             .param("id", orderId)
             .param("owner", userId.value)
-            .query { rs, _ ->
-                OrderView(
-                    orderId = rs.getLong("order_id"),
-                    clientOrderId = rs.getString("client_order_id"),
-                    marketId = rs.getLong("market_id"),
-                    side = Side.valueOf(rs.getString("side")),
-                    price = rs.getLong("price"),
-                    quantity = rs.getLong("quantity"),
-                    filled = rs.getLong("filled"),
-                    timeInForce = TimeInForce.valueOf(rs.getString("time_in_force")),
-                    assetId = (rs.getObject("asset_id") as Number?)?.toLong(),
-                    targetOrderId = (rs.getObject("target_order_id") as Number?)?.toLong(),
-                    status = OrderStatus.valueOf(rs.getString("status")),
-                    closeReason = rs.getString("close_reason")?.let(CloseReason::valueOf),
-                    createdAt = rs.getObject("created_at", OffsetDateTime::class.java).toInstant(),
-                )
-            }
+            .query { rs, _ -> orderView(rs) }
             .optional()
             .orElseThrow { notFound("Order $orderId") }
+
+    /** The user's orders, newest first. */
+    @Transactional(readOnly = true)
+    fun list(userId: UserId, filter: OrderFilter, marketId: Long?, limit: Int): List<OrderView> {
+        if (limit !in 1..MAX_LIST_LIMIT) {
+            throw invalidRequest("limit must be between 1 and $MAX_LIST_LIMIT")
+        }
+        // One of three constants, never taken from the request
+        val statusCondition = when (filter) {
+            OrderFilter.ACTIVE -> "and o.status <> 'CLOSED'"
+            OrderFilter.CLOSED -> "and o.status = 'CLOSED'"
+            OrderFilter.ALL -> ""
+        }
+        return jdbc.sql(
+            """
+            select o.*, m.market_id from orders o join markets m using (market_key)
+            where o.owner_id = :owner $statusCondition
+              and (cast(:marketId as bigint) is null or m.market_id = :marketId)
+            order by o.created_at desc, o.order_id desc
+            limit :limit
+            """
+        )
+            .param("owner", userId.value)
+            .param("marketId", marketId, Types.BIGINT)
+            .param("limit", limit)
+            .query { rs, _ -> orderView(rs) }
+            .list()
+    }
+
+    private fun orderView(rs: ResultSet) = OrderView(
+        orderId = rs.getLong("order_id"),
+        clientOrderId = rs.getString("client_order_id"),
+        marketId = rs.getLong("market_id"),
+        side = Side.valueOf(rs.getString("side")),
+        price = rs.getLong("price"),
+        quantity = rs.getLong("quantity"),
+        filled = rs.getLong("filled"),
+        timeInForce = TimeInForce.valueOf(rs.getString("time_in_force")),
+        assetId = (rs.getObject("asset_id") as Number?)?.toLong(),
+        targetOrderId = (rs.getObject("target_order_id") as Number?)?.toLong(),
+        status = OrderStatus.valueOf(rs.getString("status")),
+        closeReason = rs.getString("close_reason")?.let(CloseReason::valueOf),
+        createdAt = rs.getObject("created_at", OffsetDateTime::class.java).toInstant(),
+    )
 
     private fun validateNumbers(request: PlaceOrderRequest) {
         if (request.clientOrderId.length !in 1..64) {
@@ -403,5 +434,6 @@ class OrderService(
         // Small enough that price × quantity always fits in a Long
         const val MAX_PRICE = 1_000_000_000L
         const val MAX_QUANTITY = 1_000_000_000L
+        const val MAX_LIST_LIMIT = 200
     }
 }

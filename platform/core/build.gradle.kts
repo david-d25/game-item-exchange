@@ -11,6 +11,7 @@ dependencies {
     implementation(libs.spring.boot.starter.kafka)
     implementation(libs.spring.boot.starter.actuator)
     implementation(libs.jackson.module.kotlin)
+    implementation(libs.nimbus.jose.jwt)
     runtimeOnly(libs.flyway.database.postgresql)
     runtimeOnly(libs.postgresql)
     runtimeOnly(libs.micrometer.registry.prometheus)
