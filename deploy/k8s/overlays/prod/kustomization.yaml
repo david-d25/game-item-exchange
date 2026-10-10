@@ -1,0 +1,51 @@
+# Production: k3s on a VDS shared with other projects. The same base as the local cluster,
+# made smaller. See deploy/README.md.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: gie
+resources:
+  - ../../base
+  - kafka.yaml
+patches:
+  - path: single-instance.yaml
+  - path: gateway.yaml
+# Secrets are created once on the server and never stored in git:
+#   postgres      username, password
+#   core-secrets  auth-secret, internal-token
+configMapGenerator:
+  - name: core-config
+    literals:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/core
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      # Topics must exist before anything uses them: stop and let Kubernetes restart core
+      # rather than run on without them
+      - GIEXCHANGE_TOPICS_CREATE=true
+      - SPRING_KAFKA_ADMIN_FAIL_FAST=true
+      # The image sizes the heap from the container limit; smaller here. C1 only: less memory
+      # and CPU spent on compiling, enough speed for a demo.
+      - JAVA_TOOL_OPTIONS=-Xmx192m -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=64m -XX:TieredStopAtLevel=1 -Xss512k
+      - SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=5
+  - name: matcher-config
+    literals:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - JAVA_TOOL_OPTIONS=-Xmx128m -XX:MaxMetaspaceSize=64m -XX:ReservedCodeCacheSize=32m -Xss512k
+  - name: bots-config
+    literals:
+      - BOT_MAKERS=2
+      - BOT_TAKERS=3
+      # Every order stays in Kafka and in the database forever: half the local rate
+      - BOT_ORDERS_PER_SECOND=1
+# Images from GHCR. CI replaces every newTag with the commit it deploys.
+images:
+  - name: game-item-exchange/core
+    newName: ghcr.io/david-d25/game-item-exchange/core
+    newTag: latest
+  - name: game-item-exchange/matcher
+    newName: ghcr.io/david-d25/game-item-exchange/matcher
+    newTag: latest
+  - name: game-item-exchange/web
+    newName: ghcr.io/david-d25/game-item-exchange/web
+    newTag: latest
+  - name: game-item-exchange/bots
+    newName: ghcr.io/david-d25/game-item-exchange/bots
+    newTag: latest

@@ -1,9 +1,9 @@
 # Build once, deploy that exact build.
 #
 # The images are the artifact: they are built here, tagged with the commit they came from,
-# pushed to GHCR, and the server only pulls them. See deployment/README.md.
+# pushed to GHCR, and k3s on the server only pulls them. See deploy/README.md.
 #
-# Rolling back is setting TAG to an older commit on the server and running `up -d`.
+# Rolling back is `kubectl -n gie rollout undo` on the server, or running this workflow on an older commit.
 
 name: Deploy
 
@@ -139,29 +139,28 @@ jobs:
           host-key: ${{ vars.DEPLOY_HOST_KEY }}
           user: ${{ vars.DEPLOY_USER }}
 
-      # One connection for the whole deploy; the files travel through the same pipe as a tar stream.
-      #
-      # `.env` and `kafka-data/` are not in the archive (they are not in git), so the server's own
-      # copies survive; only the TAG line is rewritten. kafka-data/ is created here, by the deploy user:
-      # Docker would create a missing bind-mount source owned by root, and Kafka could not write to it.
-      #
-      # --wait fails the job if core does not become healthy, instead of reporting success
-      # while the site answers 503.
-      - name: Ship and restart
+      # The overlay names every image with the tag `latest`; this deploy pins the commit it has just built,
+      # so every deploy changes the pod specs and Kubernetes rolls them out.
+      - name: Pin the images to this commit
+        run: |
+          sed -i "s/newTag: latest/newTag: $GITHUB_SHA/" deploy/k8s/overlays/prod/kustomization.yaml
+          grep -c "newTag: $GITHUB_SHA" deploy/k8s/overlays/prod/kustomization.yaml
+
+      # One connection for the whole deploy; the manifests travel through the same pipe as a tar stream
+      # and replace the previous copy on the server. Secrets are not in them: they live in the cluster.
+      - name: Apply and wait for the rollout
         env:
           DIR: ${{ vars.DEPLOY_PATH }}
-          TAG: ${{ github.sha }}
         run: |
-          tar -C deployment -czf - . | ssh deploy-target "
+          tar -C deploy/k8s -czf - . | ssh deploy-target "
             set -eu
-            mkdir -p '$DIR'
-            tar -C '$DIR' -xzf -
-            cd '$DIR'
-            mkdir -p kafka-data
-            touch .env
-            sed -i '/^TAG=/d' .env
-            echo 'TAG=$TAG' >> .env
-            docker compose pull
-            docker compose up -d --remove-orphans --wait --wait-timeout 300
-            docker image prune -f
+            rm -rf '$DIR/k8s.new'
+            mkdir -p '$DIR/k8s.new'
+            tar -C '$DIR/k8s.new' -xzf -
+            rm -rf '$DIR/k8s'
+            mv '$DIR/k8s.new' '$DIR/k8s'
+            kubectl apply -k '$DIR/k8s/overlays/prod'
+            for workload in statefulset/postgres statefulset/kafka deployment/core-api deployment/matcher deployment/web deployment/bots; do
+              kubectl -n gie rollout status \$workload --timeout=300s
+            done
           "

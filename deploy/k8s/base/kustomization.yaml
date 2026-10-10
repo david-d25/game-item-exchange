@@ -8,5 +8,3 @@ resources:
   - matcher.yaml
   - web.yaml
   - bots.yaml
-  - ingress.yaml
-  - podmonitors.yaml

@@ -3,6 +3,9 @@ kind: Kustomization
 namespace: gie
 resources:
   - ../../base
+  # Need Traefik and the Prometheus operator, which only the local cluster has
+  - ingress.yaml
+  - podmonitors.yaml
 secretGenerator:
   - name: postgres
     literals:

@@ -6,6 +6,8 @@ through an API, players trade them for credits, and every trade settles through 
 It is a portfolio project: the credits are play money, bots trade around the clock so the market is always
 moving, and anyone can try it with a guest account.
 
+**Live: https://davids-digital.space/exchange/**
+
 ## The path of an order
 
 ```mermaid
@@ -52,8 +54,7 @@ More on the design:
 | [`platform/contracts`](platform/contracts) | Kafka message formats shared by both |
 | [`platform/web`](platform/web) | React and TypeScript; the nginx image that serves it is also the gateway |
 | [`clients/bots`](clients/bots) | Market makers and takers in TypeScript, an ordinary API client |
-| [`deploy`](deploy) | Kubernetes: manifests, Strimzi Kafka, Prometheus and Grafana with a dashboard |
-| [`deployment`](deployment) | Production: Docker Compose on a VDS, deployed by GitHub Actions |
+| [`deploy`](deploy) | Kubernetes: manifests with a local and a production overlay, Strimzi Kafka, Prometheus and Grafana with a dashboard |
 | [`docs/api.md`](docs/api.md) | The HTTP API |
 
 ## Running it locally
@@ -88,6 +89,7 @@ Then run core with the `dev` profile and `MatcherAppKt`, and the web app with `n
 
 ## Production
 
-The public instance runs the same images in Docker Compose on a small server shared with other projects:
-one process of each kind and a single Kafka broker. Every push to `main` is built, tested and deployed by
-GitHub Actions. See [deployment/README.md](deployment/README.md).
+The public instance runs on k3s on a small server shared with other projects, from the same manifests as
+the local cluster with a smaller overlay: one process of each kind and a single Kafka broker. Every push to
+`main` is built, tested, published to GHCR and rolled out by GitHub Actions. See
+[deploy/README.md](deploy/README.md).

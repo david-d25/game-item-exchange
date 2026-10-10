@@ -1,0 +1,14 @@
+# The way in from the host. k3s runs without Traefik and without its load balancer: the host's own
+# nginx already terminates TLS for the other projects and forwards /exchange/ to this port.
+# kube-proxy accepts node ports on 127.0.0.1 only (nodeport-addresses in the k3s config, see
+# deploy/README.md), so the port is not reachable from outside.
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+spec:
+  type: NodePort
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080

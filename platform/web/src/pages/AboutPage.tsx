@@ -83,9 +83,9 @@ export function AboutPage() {
           <div>
             <dt>Infrastructure</dt>
             <dd>
-              Developed on Kubernetes: Kafka is managed by Strimzi, Prometheus collects metrics from every service,
-              and Grafana shows them. This public instance runs the same images in Docker Compose on a small server
-              shared with other projects, with one instance of each service.
+              Kubernetes. This public instance runs on k3s on a small server shared with other projects, one
+              instance of each service and a single Kafka broker. The development cluster runs the same manifests
+              at full size: replicas that split the work, Kafka managed by Strimzi, Prometheus and Grafana.
             </dd>
           </div>
           <div>

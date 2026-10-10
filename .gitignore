@@ -53,9 +53,6 @@ replay_pid*
 Thumbs.db
 desktop.ini
 
-# Production data on the server, next to deployment/compose.yaml
-deployment/kafka-data/
-
 # Working files of Claude sessions
 .claude-bridge/
 .agent-artifacts/
