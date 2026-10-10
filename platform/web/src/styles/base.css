@@ -1,0 +1,439 @@
+/*
+ * Tokens. Anthracite surfaces, one accent (amethyst) for the viewer: their actions, their orders, where they are.
+ * Green and red only ever mean buy/sell or price up/down. Lines are hairlines, never shadows.
+ * One family, Archivo, with its width axis doing the hierarchy: expanded for names and titles,
+ * semi-condensed for dense numbers. All figures are tabular.
+ */
+:root {
+  --bg: #13161c;
+  --pane: #171a21;
+  --pane-raised: #1d2129;
+  --pane-hover: #1f242d;
+  --line: #242934;
+  --line-strong: #313744;
+  --text: #e6e8ec;
+  --text-2: #9aa2b0;
+  --text-3: #6b7382;
+  --accent: #a493ff;
+  --accent-strong: #bdb1ff;
+  --accent-ink: #15121f;
+  --accent-soft: rgba(164, 147, 255, 0.14);
+  --buy: #34c38f;
+  --buy-strong: #4fd6a2;
+  --buy-soft: rgba(52, 195, 143, 0.13);
+  --sell: #f0616d;
+  --sell-strong: #ff7a85;
+  --sell-soft: rgba(240, 97, 109, 0.13);
+
+  --font: 'Archivo Variable', 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
+
+  --fs-11: 0.6875rem;
+  --fs-12: 0.75rem;
+  --fs-13: 0.8125rem;
+  --fs-14: 0.875rem;
+  --fs-16: 1rem;
+  --fs-21: 1.3125rem;
+  --fs-28: 1.75rem;
+  --fs-36: 2.25rem;
+
+  --radius: 6px;
+  --radius-control: 4px;
+  --gutter: 20px;
+  --page-max: 1560px;
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--fs-14);
+  line-height: 1.5;
+  font-stretch: 100%;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+p,
+dl,
+dd,
+ol,
+ul,
+figure {
+  margin: 0;
+}
+
+ol,
+ul {
+  padding: 0;
+  list-style: none;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 650;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+a {
+  color: inherit;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  text-decoration-color: currentColor;
+}
+
+p a,
+dd a,
+li a,
+.link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+p a:hover,
+dd a:hover,
+li a:hover,
+.link:hover {
+  text-decoration: underline;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  padding: 0.05em 0.35em;
+  border-radius: 3px;
+  background: var(--pane-raised);
+  border: 1px solid var(--line);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--text-2);
+}
+
+.up {
+  color: var(--buy);
+}
+
+.down {
+  color: var(--sell);
+}
+
+.r {
+  text-align: right;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -40px;
+  z-index: 100;
+  padding: 8px 12px;
+  border-radius: var(--radius-control);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.skip-link:focus {
+  top: 12px;
+}
+
+/* --- Controls -------------------------------------------------------------------------------------------------- */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  font-size: var(--fs-14);
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.button:disabled {
+  opacity: 0.45;
+}
+
+.button-primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.button-primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+.button-secondary {
+  background: var(--pane-raised);
+  border-color: var(--line-strong);
+}
+
+.button-secondary:hover:not(:disabled) {
+  border-color: var(--text-3);
+}
+
+.button-ghost {
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--text-2);
+}
+
+.button-ghost:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--text-3);
+}
+
+.button-buy {
+  background: var(--buy);
+  color: #08140f;
+}
+
+.button-buy:hover:not(:disabled) {
+  background: var(--buy-strong);
+}
+
+.button-sell {
+  background: var(--sell);
+  color: #1c0a0c;
+}
+
+.button-sell:hover:not(:disabled) {
+  background: var(--sell-strong);
+}
+
+.button-small {
+  height: 26px;
+  padding: 0 10px;
+  font-size: var(--fs-12);
+}
+
+.button-block {
+  width: 100%;
+  height: 40px;
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-2);
+}
+
+.icon-button:hover {
+  color: var(--text);
+  background: var(--pane-raised);
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font-size: var(--fs-12);
+}
+
+.link-button:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.link-button:disabled {
+  opacity: 0.5;
+}
+
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border-radius: var(--radius-control);
+  background: var(--bg);
+  border: 1px solid var(--line);
+}
+
+.segmented button {
+  min-width: 44px;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-13);
+  font-weight: 600;
+}
+
+.segmented button:hover {
+  color: var(--text);
+}
+
+.segmented button.is-active {
+  background: var(--pane-raised);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+.segmented-small button {
+  min-width: 34px;
+  height: 22px;
+  padding: 0 8px;
+  font-size: var(--fs-12);
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+}
+
+.tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-13);
+  font-weight: 600;
+}
+
+.tabs button:hover {
+  color: var(--text);
+}
+
+.tabs button[aria-selected='true'] {
+  color: var(--text);
+  background: var(--pane-raised);
+}
+
+.tab-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--fs-11);
+  line-height: 18px;
+  text-align: center;
+}
+
+.live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 0 rgba(164, 147, 255, 0.5);
+  animation: live-pulse 2.4s ease-out infinite;
+  flex: none;
+}
+
+@keyframes live-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(164, 147, 255, 0.45);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 7px rgba(164, 147, 255, 0);
+  }
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 3px 1px 6px;
+  border-radius: 50%;
+  background: currentColor;
+  vertical-align: middle;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

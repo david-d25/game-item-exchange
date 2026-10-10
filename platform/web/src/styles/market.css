@@ -1,0 +1,844 @@
+/*
+ * The market page is one tiled terminal: panes share hairline borders (the 1px grid gap shows the line color)
+ * instead of floating as separate cards.
+ */
+
+.crumbs {
+  display: flex;
+  gap: 8px;
+  margin: -4px 0 12px;
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+
+.crumbs a {
+  color: var(--text-2);
+  text-decoration: none;
+}
+
+.crumbs a:hover {
+  color: var(--text);
+}
+
+.market-page.is-loading {
+  min-height: 70vh;
+}
+
+.terminal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px 330px;
+  grid-template-areas:
+    'stats stats stats'
+    'chart book form'
+    'orders trades form';
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.terminal > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--pane);
+}
+
+.terminal .pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border: 0;
+  border-radius: 0;
+}
+
+.area-stats {
+  grid-area: stats;
+}
+
+.area-chart {
+  grid-area: chart;
+}
+
+.area-book {
+  grid-area: book;
+}
+
+.area-trades {
+  grid-area: trades;
+}
+
+.area-form {
+  grid-area: form;
+}
+
+.area-orders {
+  grid-area: orders;
+}
+
+/* --- Stats strip ---------------------------------------------------------------------------------------------------- */
+
+.terminal .stats {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px 36px;
+  padding: 14px 18px;
+}
+
+.stats-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stats-title h1 {
+  font-size: var(--fs-21);
+  font-stretch: 118%;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.stats-title p {
+  font-size: var(--fs-12);
+}
+
+.stats-price {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: var(--fs-14);
+  font-weight: 600;
+}
+
+.stats-last {
+  font-size: var(--fs-28);
+  font-weight: 650;
+  font-stretch: 96%;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  color: var(--text);
+  transition: color 300ms ease;
+}
+
+.stats-last.up {
+  color: var(--buy);
+}
+
+.stats-last.down {
+  color: var(--sell);
+}
+
+.stats-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  margin-left: auto;
+}
+
+.stats-list dt {
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+
+.stats-list dd {
+  font-size: var(--fs-14);
+  font-weight: 600;
+}
+
+.item-glyph {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  background: var(--pane-raised);
+  border: 1px solid var(--line);
+}
+
+/* --- Chart ---------------------------------------------------------------------------------------------------------- */
+
+.chart-body {
+  position: relative;
+  flex: 1;
+  min-height: 420px;
+}
+
+.chart-legend {
+  position: absolute;
+  top: 8px;
+  left: 14px;
+  z-index: 2;
+  display: flex;
+  gap: 14px;
+  color: var(--text-3);
+  font-size: var(--fs-12);
+  pointer-events: none;
+}
+
+.chart-legend b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.chart-legend b.up {
+  color: var(--buy);
+}
+
+.chart-legend b.down {
+  color: var(--sell);
+}
+
+.chart-canvas {
+  position: absolute;
+  inset: 30px 0 0 0;
+}
+
+.chart-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--text-3);
+  font-size: var(--fs-13);
+}
+
+/* --- Order book ----------------------------------------------------------------------------------------------------- */
+
+.book-columns,
+.book-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 48px;
+  align-items: center;
+  padding: 0 14px;
+  font-stretch: 92%;
+}
+
+.book-columns {
+  height: 28px;
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+
+.book-columns span:not(:first-child),
+.book-row span:not(.book-price):not(.depth) {
+  text-align: right;
+}
+
+.book-side {
+  display: flex;
+  flex-direction: column;
+}
+
+.book-row {
+  position: relative;
+  width: 100%;
+  height: 20px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-13);
+  line-height: 20px;
+  text-align: left;
+}
+
+button.book-row:hover {
+  background: var(--pane-hover);
+}
+
+.book-row > span {
+  position: relative;
+}
+
+.book-row .depth {
+  position: absolute;
+  top: 1px;
+  right: 0;
+  bottom: 1px;
+  transition: width 240ms ease;
+}
+
+.book-row.ask .depth {
+  background: var(--sell-soft);
+}
+
+.book-row.bid .depth {
+  background: var(--buy-soft);
+}
+
+.book-row.ask .book-price {
+  color: var(--sell);
+}
+
+.book-row.bid .book-price {
+  color: var(--buy);
+}
+
+.book-orders {
+  color: var(--text-3);
+}
+
+.book-row.is-mine::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin-top: -2.5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.book-mid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 44px;
+  margin: 4px 0;
+  padding: 0 14px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.book-last {
+  font-size: var(--fs-21);
+  font-weight: 650;
+  font-stretch: 96%;
+}
+
+.book-spread {
+  color: var(--text-2);
+  font-size: var(--fs-12);
+}
+
+/* --- Trades tape ---------------------------------------------------------------------------------------------------- */
+
+.tape {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tape-columns,
+.tape-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 72px;
+  align-items: center;
+  padding: 0 14px;
+  font-stretch: 92%;
+}
+
+.tape-wide .tape-columns,
+.tape-wide .tape-row {
+  grid-template-columns: minmax(80px, 1.3fr) 1fr 1fr 72px;
+}
+
+.tape-columns {
+  height: 28px;
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+
+.tape-columns span:not(:first-child),
+.tape-row > *:not(:first-child) {
+  text-align: right;
+}
+
+.tape-wide .tape-columns span:nth-child(2),
+.tape-wide .tape-row > :nth-child(2) {
+  text-align: right;
+}
+
+.tape-rows {
+  flex: 1;
+  overflow: hidden;
+}
+
+.tape-row {
+  height: 22px;
+  font-size: var(--fs-13);
+}
+
+.tape-row.tone-buy .tape-price {
+  color: var(--buy);
+}
+
+.tape-row.tone-sell .tape-price {
+  color: var(--sell);
+}
+
+.tape-row.is-new.tone-buy {
+  animation: flash-up 1.6s ease-out;
+}
+
+.tape-row.is-new.tone-sell {
+  animation: flash-down 1.6s ease-out;
+}
+
+@keyframes flash-up {
+  from {
+    background: rgba(52, 195, 143, 0.18);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+@keyframes flash-down {
+  from {
+    background: rgba(240, 97, 109, 0.18);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+.tape-market {
+  color: var(--text);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tape-market:hover {
+  color: var(--accent);
+}
+
+.tape-empty {
+  padding: 16px 14px;
+  color: var(--text-3);
+  font-size: var(--fs-13);
+}
+
+/* --- Order form ----------------------------------------------------------------------------------------------------- */
+
+.form-pane {
+  min-height: 100%;
+}
+
+.order-form {
+  display: grid;
+  gap: 16px;
+  padding: 14px 14px 16px;
+}
+
+.side-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--bg);
+}
+
+.side-switch button {
+  height: 32px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-14);
+  font-weight: 650;
+}
+
+.side-switch button:hover {
+  color: var(--text);
+}
+
+.side-switch button.is-active.buy {
+  background: var(--buy);
+  color: #08140f;
+}
+
+.side-switch button.is-active.sell {
+  background: var(--sell);
+  color: #1c0a0c;
+}
+
+.field {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.field label,
+.field legend {
+  display: block;
+  margin-bottom: 6px;
+  padding: 0;
+  color: var(--text-2);
+  font-size: var(--fs-12);
+  font-weight: 500;
+}
+
+.input-wrap {
+  position: relative;
+}
+
+.input-wrap input {
+  width: 100%;
+  height: 40px;
+  padding: 0 84px 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--bg);
+  font-size: var(--fs-16);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.input-wrap input::placeholder {
+  color: var(--text-3);
+}
+
+.input-wrap input:hover {
+  border-color: var(--text-3);
+}
+
+.input-wrap input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.input-wrap input[aria-invalid='true'] {
+  border-color: var(--text-2);
+}
+
+.input-unit {
+  position: absolute;
+  top: 0;
+  right: 12px;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  max-width: 76px;
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: var(--fs-12);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.field-shortcuts {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: var(--fs-12);
+}
+
+.field-shortcuts .link-button:first-child:not(:only-child) + .link-button {
+  margin-left: auto;
+}
+
+.field .segmented {
+  display: flex;
+}
+
+.field .segmented button {
+  flex: 1;
+}
+
+.field-note {
+  margin-top: 6px;
+  color: var(--text-3);
+  font-size: var(--fs-12);
+  line-height: 1.45;
+}
+
+.order-summary {
+  display: grid;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-13);
+}
+
+.order-summary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.order-summary dt {
+  color: var(--text-2);
+}
+
+.order-summary dd {
+  font-weight: 600;
+}
+
+.order-summary + .field-note {
+  margin-top: -10px;
+}
+
+.form-feedback:empty {
+  display: none;
+}
+
+.message {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--pane-raised);
+  color: var(--text);
+  font-size: var(--fs-13);
+  line-height: 1.45;
+}
+
+.message svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--text-2);
+}
+
+.message.is-ok {
+  border-color: rgba(164, 147, 255, 0.35);
+}
+
+.message.is-ok svg {
+  color: var(--accent);
+}
+
+.matching-notes {
+  margin-top: auto;
+  padding: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.matching-notes h3 {
+  margin-bottom: 8px;
+  color: var(--text-2);
+  font-size: var(--fs-12);
+  font-weight: 600;
+}
+
+.matching-notes li {
+  position: relative;
+  padding-left: 12px;
+  color: var(--text-3);
+  font-size: var(--fs-12);
+  line-height: 1.5;
+}
+
+.matching-notes li + li {
+  margin-top: 4px;
+}
+
+.matching-notes li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 4px;
+  height: 1px;
+  background: var(--text-3);
+}
+
+/* --- My orders ------------------------------------------------------------------------------------------------------ */
+
+.orders .pane-head {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.orders-empty {
+  padding: 22px 14px;
+  color: var(--text-2);
+  font-size: var(--fs-13);
+}
+
+.orders-empty a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.orders-empty a:hover {
+  text-decoration: underline;
+}
+
+.orders-table td.up,
+.orders-table td.down {
+  font-weight: 600;
+}
+
+.fill {
+  display: inline-grid;
+  justify-items: end;
+  gap: 3px;
+}
+
+.fill-bar {
+  display: block;
+  width: 56px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.fill-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 300ms ease;
+}
+
+.status {
+  color: var(--text-2);
+}
+
+.status-open {
+  color: var(--text);
+}
+
+.status-pending {
+  color: var(--text-2);
+  font-style: italic;
+}
+
+/* --- Narrower screens ----------------------------------------------------------------------------------------------- */
+
+@media (max-width: 1279px) {
+  .terminal {
+    grid-template-columns: minmax(0, 1fr) 280px 300px;
+  }
+
+  .stats-list {
+    gap: 8px 24px;
+  }
+}
+
+@media (max-width: 1099px) {
+  .terminal {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    grid-template-areas:
+      'stats stats'
+      'chart book'
+      'form trades'
+      'orders orders';
+  }
+
+  .stats-list {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .matching-notes {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 759px) {
+  .terminal {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'stats'
+      'chart'
+      'book'
+      'trades'
+      'form'
+      'orders';
+    margin: 0 calc(var(--gutter) * -1);
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+  }
+
+  .terminal .stats {
+    gap: 12px 20px;
+    padding: 14px var(--gutter);
+  }
+
+  .stats-title {
+    flex: 1;
+  }
+
+  .stats-last {
+    font-size: var(--fs-21);
+  }
+
+  .stats-price {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    font-size: var(--fs-13);
+  }
+
+  .stats-list {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+
+  .stats-list > div:first-child {
+    display: none;
+  }
+
+  .stats-list dd {
+    font-size: var(--fs-13);
+  }
+
+  .chart-body {
+    min-height: 300px;
+  }
+
+  .chart-legend {
+    gap: 10px;
+    font-size: var(--fs-11);
+  }
+
+  .pane-head,
+  .book-columns,
+  .book-row,
+  .tape-columns,
+  .tape-row,
+  .order-form,
+  .matching-notes {
+    padding-left: var(--gutter);
+    padding-right: var(--gutter);
+  }
+
+  .book-row.is-mine::before {
+    left: 6px;
+  }
+
+  .col-time,
+  .col-tif {
+    display: none;
+  }
+
+  .data-table td,
+  .data-table th {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  /* The time column is hidden on phones, so the next cell starts the row */
+  .data-table tr > :first-child,
+  .data-table tr > .col-time + * {
+    padding-left: var(--gutter);
+  }
+
+  .data-table tr > :last-child {
+    padding-right: var(--gutter);
+  }
+
+  .orders-empty {
+    padding-left: var(--gutter);
+    padding-right: var(--gutter);
+  }
+}

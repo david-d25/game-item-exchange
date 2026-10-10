@@ -1,0 +1,135 @@
+# Gateway in front of core, and the server of the web app under /exchange/.
+#
+# The nginx image renders this template with envsubst when the container starts. Only ${CORE_URL} and
+# ${NGINX_LOCAL_RESOLVERS} are replaced (NGINX_ENVSUBST_FILTER in the Dockerfile), so nginx's own variables
+# such as $uri stay untouched.
+# CORE_URL is core's base URL without a trailing slash, for example http://core:8080. NGINX_LOCAL_RESOLVERS is
+# filled in by the image's entrypoint from /etc/resolv.conf (NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1).
+
+# Core's address is looked up again every 10 s instead of once at startup: a restarted core container
+# usually gets a new IP address, and a gateway that kept the old one would answer 502 until restarted.
+# nginx's resolver does not use search domains, so CORE_URL must be a full name in Kubernetes.
+resolver ${NGINX_LOCAL_RESOLVERS} valid=10s ipv6=off;
+resolver_timeout 3s;
+
+# The real client address. In production a host nginx, and in Kubernetes Traefik, sits in front of this one
+# and passes the client address in X-Real-IP. Trusted only from private networks.
+set_real_ip_from 10.0.0.0/8;
+set_real_ip_from 172.16.0.0/12;
+set_real_ip_from 192.168.0.0/16;
+set_real_ip_from 127.0.0.1;
+real_ip_header X-Real-IP;
+
+# Per client address: the API in general, and a much stricter limit for creating guest accounts
+limit_req_zone $binary_remote_addr zone=api:10m rate=20r/s;
+limit_req_zone $binary_remote_addr zone=guests:10m rate=6r/m;
+limit_req_status 429;
+limit_req_log_level warn;
+
+# Keep the scheme the outer proxy saw (it terminates TLS); fall back to our own
+map $http_x_forwarded_proto $forwarded_proto {
+    default $http_x_forwarded_proto;
+    ''      $scheme;
+}
+
+server {
+    listen 80;
+    server_name _;
+    server_tokens off;
+
+    # Redirects stay relative, so they keep the scheme and host of the outer proxy
+    absolute_redirect off;
+
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 5;
+    gzip_min_length 512;
+    gzip_types text/plain text/css text/javascript application/javascript application/json
+               application/problem+json image/svg+xml;
+
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $forwarded_proto;
+    proxy_connect_timeout 5s;
+    proxy_read_timeout 30s;
+
+    # A variable in proxy_pass makes nginx resolve the name at request time, through the resolver above
+    set $core ${CORE_URL};
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 'ok';
+    }
+
+    location = / {
+        return 302 /exchange/;
+    }
+
+    location = /exchange {
+        return 301 /exchange/;
+    }
+
+    # A new guest account costs a database row and a starter pack: a few per minute per address
+    location = /exchange/api/v1/auth/guest {
+        limit_req zone=guests burst=3 nodelay;
+        error_page 429 @too_many_guests;
+        error_page 502 504 =503 @core_unavailable;
+        rewrite ^/exchange(/api/.*)$ $1 break;
+        proxy_pass $core;
+    }
+
+    # The public API only: /exchange/api/... goes to core's /api/...
+    # Nothing else is proxied, so core's /internal and /actuator stay unreachable from outside.
+    location /exchange/api/ {
+        limit_req zone=api burst=40 nodelay;
+        error_page 429 @too_many_requests;
+        error_page 502 504 =503 @core_unavailable;
+        rewrite ^/exchange(/api/.*)$ $1 break;
+        proxy_pass $core;
+    }
+
+    # Rejections by the limits above, as Problem Details like the rest of the API
+    location @too_many_guests {
+        default_type application/problem+json;
+        add_header Retry-After 10 always;
+        return 429 '{"type":"/problems/too-many-guests","title":"Too many guests","status":429,"detail":"Too many guest accounts were created from your address. Try again in a minute."}';
+    }
+
+    # nginx's own 502 and 504: core is not running (a deploy restarts it) or does not answer.
+    # Errors that core itself returns pass through unchanged.
+    location @core_unavailable {
+        default_type application/problem+json;
+        add_header Retry-After 5 always;
+        return 503 '{"type":"/problems/unavailable","title":"Temporarily unavailable","status":503,"detail":"The exchange is restarting or overloaded. Try again in a few seconds."}';
+    }
+
+    location @too_many_requests {
+        default_type application/problem+json;
+        add_header Retry-After 1 always;
+        return 429 '{"type":"/problems/too-many-requests","title":"Too many requests","status":429,"detail":"Too many requests from your address. Slow down and try again."}';
+    }
+
+    # Built assets have content hashes in their names, so they never change
+    location /exchange/assets/ {
+        root /usr/share/nginx/html;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        try_files $uri =404;
+    }
+
+    # The single-page app: unknown paths get index.html and the router takes over.
+    # no-cache makes browsers revalidate index.html, so a deploy is picked up on the next load.
+    location /exchange/ {
+        root /usr/share/nginx/html;
+        add_header Cache-Control "no-cache";
+        try_files $uri $uri/ /exchange/index.html;
+    }
+
+    location / {
+        return 404;
+    }
+}

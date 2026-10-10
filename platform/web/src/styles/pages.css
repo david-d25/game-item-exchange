@@ -1,0 +1,617 @@
+/* --- Markets -------------------------------------------------------------------------------------------------------- */
+
+.intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px 48px;
+  margin: 8px 0 22px;
+}
+
+.intro-text {
+  display: grid;
+  gap: 10px;
+}
+
+.live-status {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  font-size: var(--fs-12);
+  text-align: right;
+  flex: none;
+}
+
+.live-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: var(--fs-13);
+  font-weight: 600;
+}
+
+.live-figure {
+  margin-top: 4px;
+  font-size: var(--fs-28);
+  font-weight: 650;
+  font-stretch: 96%;
+  line-height: 1.05;
+}
+
+.live-last {
+  color: var(--text-3);
+}
+
+.market-list {
+  overflow: hidden;
+}
+
+.market-row {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.5fr) repeat(5, minmax(84px, 1fr)) minmax(150px, 1.5fr);
+  align-items: center;
+  gap: 16px;
+  min-height: 72px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  text-decoration: none;
+  font-stretch: 94%;
+}
+
+.market-row:last-child {
+  border-bottom: 0;
+}
+
+a.market-row:hover {
+  background: var(--pane-hover);
+}
+
+a.market-row:hover .market-name b {
+  color: var(--accent);
+}
+
+.market-row-head {
+  min-height: 38px;
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+
+.market-name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.market-name > span:last-child {
+  display: grid;
+  min-width: 0;
+}
+
+.market-name b {
+  font-size: var(--fs-16);
+  font-weight: 650;
+  font-stretch: 108%;
+  transition: color 120ms ease;
+}
+
+.market-name .muted {
+  font-size: var(--fs-12);
+}
+
+.market-last {
+  font-size: var(--fs-16);
+  font-weight: 600;
+}
+
+.market-change {
+  font-weight: 600;
+}
+
+.col-spark {
+  display: block;
+  height: 38px;
+}
+
+.market-row-head .col-spark {
+  height: auto;
+}
+
+.sparkline {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.sparkline.tone-up {
+  color: var(--buy);
+}
+
+.sparkline.tone-down {
+  color: var(--sell);
+}
+
+.sparkline.tone-flat {
+  color: var(--text-2);
+}
+
+.sparkline-empty {
+  border-bottom: 1px dashed var(--line-strong);
+  height: 50%;
+}
+
+.market-list-status {
+  padding: 28px 18px;
+  color: var(--text-2);
+}
+
+.markets-lower {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+  align-items: start;
+}
+
+.tape-pane .tape-rows {
+  padding-bottom: 6px;
+}
+
+.steps {
+  counter-reset: step;
+  display: grid;
+  gap: 14px;
+  padding: 16px 18px 4px;
+}
+
+.steps li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 36px;
+  color: var(--text-2);
+  font-size: var(--fs-14);
+  line-height: 1.55;
+}
+
+.steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  font-size: var(--fs-12);
+  font-weight: 650;
+}
+
+.steps b {
+  color: var(--text);
+  font-weight: 620;
+}
+
+.flow-teaser-more {
+  padding: 14px 18px 18px 54px;
+  font-size: var(--fs-14);
+}
+
+/* --- Portfolio ------------------------------------------------------------------------------------------------------ */
+
+.portfolio-page > .pane + .pane,
+.portfolio-page > .pane + section {
+  margin-top: 16px;
+}
+
+.portfolio-cta {
+  max-width: 460px;
+}
+
+.summary-strip dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.summary-strip dl > div {
+  padding: 16px 18px;
+}
+
+.summary-strip dl > div + div {
+  border-left: 1px solid var(--line);
+}
+
+.summary-strip dt {
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+
+.summary-strip dd {
+  margin-top: 4px;
+  font-size: var(--fs-21);
+  font-weight: 650;
+  font-stretch: 96%;
+}
+
+.summary-total dd {
+  color: var(--accent);
+}
+
+.item-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+/* --- About ---------------------------------------------------------------------------------------------------------- */
+
+.about-page {
+  max-width: 980px;
+}
+
+.about-head {
+  display: grid;
+  gap: 14px;
+  padding: 20px 0 8px;
+}
+
+.about-head h1 {
+  font-size: var(--fs-36);
+}
+
+.about-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.about-links .button {
+  color: var(--text);
+}
+
+.about-section {
+  margin-top: 52px;
+}
+
+.about-section > h2 {
+  margin-bottom: 18px;
+  font-size: var(--fs-21);
+  font-stretch: 112%;
+  font-weight: 680;
+}
+
+.about-steps {
+  max-width: 72ch;
+  margin-top: 28px;
+  padding: 0;
+  gap: 18px;
+}
+
+.about-steps li {
+  font-size: var(--fs-16);
+}
+
+.about-steps li::before {
+  top: 1px;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.facts > div {
+  padding: 18px 20px 20px;
+  background: var(--pane);
+}
+
+.facts dt {
+  margin-bottom: 6px;
+  font-weight: 650;
+}
+
+.facts dd {
+  color: var(--text-2);
+  line-height: 1.6;
+}
+
+.facts dd b {
+  color: var(--text);
+  font-weight: 620;
+}
+
+.about-credit {
+  margin-top: 40px;
+  font-size: var(--fs-12);
+}
+
+/* Flow diagram */
+
+.flow {
+  padding: 18px 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--pane);
+}
+
+.flow svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.flow-narrow {
+  display: none !important;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.flow-node rect {
+  fill: var(--pane-raised);
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+
+.flow-client rect {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+}
+
+.flow-store rect {
+  fill: var(--bg);
+}
+
+.flow-topic rect {
+  fill: var(--bg);
+  stroke-dasharray: 3 3;
+}
+
+.flow-partition {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+
+.flow-title {
+  fill: var(--text);
+  font-size: 13.5px;
+  font-weight: 650;
+}
+
+.flow-line {
+  fill: var(--text-2);
+  font-size: 11.5px;
+}
+
+.flow-step {
+  fill: var(--accent);
+  stroke: var(--pane);
+  stroke-width: 3;
+}
+
+.flow-step-number {
+  fill: var(--accent-ink);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.flow-edge {
+  stroke: var(--text-3);
+  stroke-width: 1.25;
+}
+
+.flow-edge-back {
+  stroke-dasharray: 4 4;
+}
+
+.flow-arrowhead {
+  fill: var(--text-3);
+}
+
+.flow-edge-label {
+  fill: var(--text-3);
+  font-size: 11px;
+}
+
+.flow figcaption {
+  margin: 14px 4px 0;
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+
+/* --- Not found ------------------------------------------------------------------------------------------------------ */
+
+.narrow-page {
+  max-width: 560px;
+  padding-top: 72px;
+}
+
+.not-found {
+  display: grid;
+  gap: 12px;
+}
+
+.not-found h1 {
+  font-size: var(--fs-28);
+  font-stretch: 118%;
+}
+
+.not-found p {
+  color: var(--text-2);
+}
+
+/* --- Responsive ----------------------------------------------------------------------------------------------------- */
+
+@media (max-width: 1099px) {
+  .market-row {
+    grid-template-columns: minmax(170px, 1.5fr) repeat(3, minmax(80px, 1fr)) minmax(120px, 1.3fr);
+  }
+
+  .market-row .col-quote {
+    display: none;
+  }
+
+  .markets-lower {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 759px) {
+  .intro {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    margin-top: 0;
+  }
+
+  .live-status {
+    grid-template-columns: auto 1fr;
+    justify-items: start;
+    align-items: baseline;
+    column-gap: 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--pane);
+    text-align: left;
+  }
+
+  .live-label {
+    grid-column: 1 / -1;
+  }
+
+  .live-figure {
+    font-size: var(--fs-21);
+  }
+
+  .live-last {
+    grid-column: 1 / -1;
+  }
+
+  .market-list,
+  .markets-lower > .pane,
+  .portfolio-page > .pane,
+  .portfolio-page > section {
+    margin-left: calc(var(--gutter) * -1);
+    margin-right: calc(var(--gutter) * -1);
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+  }
+
+  .market-row {
+    grid-template-columns: minmax(0, 1fr) 76px 96px;
+    grid-template-areas:
+      'name spark last'
+      'name spark change';
+    gap: 0 14px;
+    min-height: 68px;
+    padding: 10px var(--gutter);
+  }
+
+  .market-row-head {
+    display: none;
+  }
+
+  .market-name {
+    grid-area: name;
+  }
+
+  .market-row .col-spark {
+    grid-area: spark;
+    height: 32px;
+  }
+
+  .market-last {
+    grid-area: last;
+    align-self: end;
+  }
+
+  .market-change {
+    grid-area: change;
+    align-self: start;
+    font-size: var(--fs-13);
+  }
+
+  .market-row .col-volume {
+    display: none;
+  }
+
+  .markets-lower .pane-head,
+  .markets-lower .tape-columns,
+  .markets-lower .tape-row {
+    padding-left: var(--gutter);
+    padding-right: var(--gutter);
+  }
+
+  .steps {
+    padding: 14px var(--gutter) 4px;
+  }
+
+  .flow-teaser-more {
+    padding: 12px var(--gutter) 16px calc(var(--gutter) + 36px);
+  }
+
+  .summary-strip dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summary-strip dl > div {
+    padding: 14px var(--gutter);
+  }
+
+  .summary-strip dl > div:nth-child(3) {
+    border-left: 0;
+  }
+
+  .summary-strip dl > div:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+  }
+
+  .summary-strip dd {
+    font-size: var(--fs-16);
+  }
+
+  .col-optional {
+    display: none;
+  }
+
+  .about-head h1 {
+    font-size: var(--fs-28);
+  }
+
+  .about-steps li {
+    font-size: var(--fs-14);
+  }
+
+  .facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .flow {
+    padding: 14px 8px 12px;
+  }
+
+  .flow-wide {
+    display: none !important;
+  }
+
+  .flow-narrow {
+    display: block !important;
+  }
+}
