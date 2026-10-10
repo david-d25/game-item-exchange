@@ -1,0 +1,23 @@
+{
+  "name": "@game-item-exchange/bots",
+  "version": "0.1.0",
+  "description": "Market-making and taker bots that keep the Game Item Exchange demo market alive",
+  "private": true,
+  "license": "SEE LICENSE IN ../../LICENSE.md",
+  "type": "module",
+  "main": "dist/main.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "prebuild": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "pretest": "node -e \"require('node:fs').rmSync('dist-test',{recursive:true,force:true})\"",
+    "test": "tsc -p tsconfig.test.json && node --test --test-reporter=spec \"dist-test/test/**/*.test.js\""
+  },
+  "devDependencies": {
+    "@types/node": "22.20.4",
+    "typescript": "6.0.3"
+  }
+}

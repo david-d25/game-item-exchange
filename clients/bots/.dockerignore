@@ -1,0 +1,14 @@
+node_modules
+dist
+dist-test
+test
+tsconfig.test.json
+coverage
+*.log
+.env
+.env.*
+.DS_Store
+.gitignore
+Dockerfile
+.dockerignore
+README.md
