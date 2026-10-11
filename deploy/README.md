@@ -73,9 +73,12 @@ sudo install -o deploy -g deploy -m 600 /etc/rancher/k3s/k3s.yaml /home/deploy/.
 sudo install -d -o deploy -g deploy /srv/game-item-exchange
 ```
 
-**Secrets.** Created once, as `deploy`, and never stored in git:
+**Secrets.** Created once and never stored in git. As `deploy`, whose kubeconfig was copied above;
+other users have none, and kubectl then tries `localhost:8080` and fails:
 
 ```sh
+sudo -iu deploy
+kubectl get nodes   # the node, Ready: kubectl reaches k3s
 kubectl create namespace gie
 kubectl -n gie create secret generic postgres \
   --from-literal=username=core \
