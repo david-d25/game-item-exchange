@@ -79,7 +79,7 @@ other users have none, and kubectl then tries `localhost:8080` and fails:
 ```sh
 sudo -iu deploy
 kubectl get nodes   # the node, Ready: kubectl reaches k3s
-kubectl create namespace gie
+kubectl create namespace gie --save-config   # --save-config: later `kubectl apply` updates it quietly
 kubectl -n gie create secret generic postgres \
   --from-literal=username=core \
   --from-literal=password="$(openssl rand -hex 24)"

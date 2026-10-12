@@ -73,14 +73,30 @@ spec:
               value: "0"
             - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
               value: "false"
+            # Fewer threads than the defaults (3 network, 8 I/O, 10 background), sized for a few
+            # messages a second: every thread costs a stack and competes for the CPU
+            - name: KAFKA_NUM_NETWORK_THREADS
+              value: "2"
+            - name: KAFKA_NUM_IO_THREADS
+              value: "2"
+            - name: KAFKA_BACKGROUND_THREADS
+              value: "2"
+            # Used when the topic is created, so only after a reset: 50 partitions of consumer offsets
+            # are 50 sets of files for three consumer groups
+            - name: KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS
+              value: "3"
             - name: KAFKA_OPTS
               value: -Xmx192m
+          # The limit leaves room above the heap on purpose. Pods get no swap, so a container at its limit
+          # can only drop file pages: Kafka's data and the code of this 140 MB binary itself. With 384Mi
+          # the broker ran for a few hours, then kept missing the 2-second heartbeats to its own controller,
+          # was fenced, and every client stopped: most likely stalled on reading those pages back from disk.
           resources:
             requests:
-              memory: 192Mi
-              cpu: 50m
-            limits:
               memory: 384Mi
+              cpu: 100m
+            limits:
+              memory: 768Mi
           readinessProbe:
             tcpSocket:
               port: 9092
