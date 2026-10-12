@@ -60,7 +60,16 @@ fun main() {
         metricsServer.stop(0)
     })
 
-    matcher.run()
+    try {
+        matcher.run()
+    } catch (e: Throwable) {
+        // The threads of the metrics server would keep the JVM alive with nothing consuming `orders`:
+        // a matcher that looks healthy and matches nothing. Exit instead, so Kubernetes restarts it.
+        // halt, not exit: exit would run the shutdown hook above, which waits for this very thread.
+        // The Kafka clients are already closed by run().
+        LoggerFactory.getLogger("space.davids_digital.giexchange.matcher.Main").error("Matcher stopped", e)
+        Runtime.getRuntime().halt(1)
+    }
 }
 
 /** Serves metrics in the Prometheus text format on /metrics, using the HTTP server built into the JDK. */

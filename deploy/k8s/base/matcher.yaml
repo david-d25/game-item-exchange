@@ -29,5 +29,5 @@ spec:
               cpu: 100m
             limits:
               memory: 384Mi
-          # No probes yet: the matcher has no HTTP endpoint, and on any error it exits,
-          # so Kubernetes restarts it anyway. A health endpoint comes together with metrics.
+          # No probes: on any error the matcher exits, and Kubernetes restarts it. Its metrics endpoint
+          # would not do as a liveness probe: it keeps answering after the matching loop has stopped.
